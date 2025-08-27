@@ -1,23 +1,31 @@
 import React, { useEffect, useState } from 'react'
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
+import Loader from '../components/Loader';
 
 export default function MyOrder() {
   const [orderData, setorderData] = useState({})
+  const [isLoading, setIsLoading] = useState(false)
 
   const fetchMyOrder = async () => {
-    await fetch(`${process.env.REACT_APP_BACKEND_SERVER}/api/myOrderData`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        email: localStorage.getItem('userEmail')
+    try {
+      setIsLoading(true)
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_SERVER}/api/myOrderData`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: localStorage.getItem('userEmail')
+        })
       })
-    }).then(async (res) => {
-      let response = await res.json()
-      await setorderData(response)
-    })
+      const response = await res.json()
+      setorderData(response)
+    } catch (e) {
+      console.error('Failed to fetch orders', e)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -32,7 +40,9 @@ export default function MyOrder() {
           <span role="img" aria-label="orders">🧾</span> My Orders
         </h2>
         <div className="row g-4 justify-content-center">
-          {orderData && orderData.orderData && orderData.orderData.order_data && orderData.orderData.order_data.length > 0 ? (
+          {isLoading ? (
+            <Loader />
+          ) : orderData && orderData.orderData && orderData.orderData.order_data && orderData.orderData.order_data.length > 0 ? (
             orderData.orderData.order_data.slice(0).reverse().map((item, idx) => (
               <React.Fragment key={idx}>
                 {item.map((arrayData, index) => (

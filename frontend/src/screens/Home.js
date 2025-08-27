@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Card from '../components/Card'
 import Crousel from '../components/Crousel'
+import Loader from '../components/Loader'
 import "../CSS/home.css";
 import { useSelector  } from 'react-redux';
 
@@ -10,28 +11,35 @@ export default function Home() {
 
   const [foodCategoryData, setFoodCategoryData] = useState([]);
   const [foodItemsdata, setfoodItemsdata] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   let serachText = useSelector(state => state.search);
 
   const loadData = async () => {
-    let responce = await fetch(`${process.env.REACT_APP_BACKEND_SERVER}/api/foodData`, {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json',
+    try {
+      setIsLoading(true);
+      let responce = await fetch(`${process.env.REACT_APP_BACKEND_SERVER}/api/foodData`, {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const responceData = await responce.json();
+
+      /*responceData that is coming from the api that is array first success second Category Data
+       third Items Data */
+      if (!responceData[0].success) {
+        return alert("There is some internal issue!!");
       }
-    });
 
-    const responceData = await responce.json();
-
-    /*responceData that is coming from the api that is array first success second Category Data
-     third Items Data */
-    if (!responceData[0].success) {
-      return alert("There is some internal issue!!");
+      setFoodCategoryData(responceData[1]);
+      setfoodItemsdata(responceData[2]);
+    } catch (err) {
+      console.error('Failed to load food data', err);
+    } finally {
+      setIsLoading(false);
     }
-
-    setFoodCategoryData(responceData[1]);
-    setfoodItemsdata(responceData[2]);
-
   }
  /* The useEffect hook is called in a component after the first render and every time the component
   updates */
@@ -51,7 +59,9 @@ export default function Home() {
 
       <div className="m-2 m-md-3 m-lg-4" style={{ background: '#f8fafc', borderRadius: '18px', padding: '2rem' }}>
         {
-          foodCategoryData.length > 0
+          isLoading ? (
+            <Loader />
+          ) : foodCategoryData.length > 0
             ? foodCategoryData.map((data, index) => {
               return (
                 <div className='row mb-3'>
@@ -78,7 +88,7 @@ export default function Home() {
               )
             })
 
-            : "There is No Data Present!!"
+            : <Loader />
         }
       </div>
       <div> <Footer /> </div>
