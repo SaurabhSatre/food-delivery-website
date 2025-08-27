@@ -18,7 +18,7 @@ app.use((req , res , next)=>{
     // Allow multiple origins for production
     const allowedOrigins = [
         process.env.FrontendWebAddress,
-        'https://your-frontend-domain.vercel.app', // Replace with your actual frontend domain
+        'https://food-delivery-website-frontend-nu.vercel.app', // Replace with your actual frontend domain
         'http://localhost:3000'
     ];
     
