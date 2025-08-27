@@ -12,12 +12,14 @@ export default function Home() {
   const [foodCategoryData, setFoodCategoryData] = useState([]);
   const [foodItemsdata, setfoodItemsdata] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   let serachText = useSelector(state => state.search);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       let responce = await fetch(`${process.env.REACT_APP_BACKEND_SERVER}/api/foodData`, {
         method: "POST",
         headers: {
@@ -25,18 +27,29 @@ export default function Home() {
         }
       });
 
+      if (!responce.ok) {
+        const text = await responce.text();
+        throw new Error(`HTTP ${responce.status}: ${text}`);
+      }
+
       const responceData = await responce.json();
 
       /*responceData that is coming from the api that is array first success second Category Data
        third Items Data */
-      if (!responceData[0].success) {
-        return alert("There is some internal issue!!");
+      if (!Array.isArray(responceData) || !responceData[0] || typeof responceData[0].success === 'undefined') {
+        console.error('Unexpected API shape for /api/foodData:', responceData);
+        throw new Error('Unexpected API response');
       }
 
-      setFoodCategoryData(responceData[1]);
-      setfoodItemsdata(responceData[2]);
+      if (!responceData[0].success) {
+        throw new Error('API reported failure');
+      }
+
+      setFoodCategoryData(Array.isArray(responceData[1]) ? responceData[1] : []);
+      setfoodItemsdata(Array.isArray(responceData[2]) ? responceData[2] : []);
     } catch (err) {
       console.error('Failed to load food data', err);
+      setError(err.message || 'Failed to load');
     } finally {
       setIsLoading(false);
     }
@@ -61,6 +74,11 @@ export default function Home() {
         {
           isLoading ? (
             <Loader />
+          ) : error ? (
+            <div className="text-center text-muted">
+              <div style={{marginBottom: '12px'}}>Unable to load data.</div>
+              <button className="btn btn-sm btn-outline-secondary" onClick={loadData}>Retry</button>
+            </div>
           ) : foodCategoryData.length > 0
             ? foodCategoryData.map((data, index) => {
               return (
