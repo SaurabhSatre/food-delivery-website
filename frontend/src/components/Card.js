@@ -9,7 +9,7 @@ function BasicExample(props) {
   const priceRef = useRef();
 
   let options = props.options;
-  let priceOptions = Object.keys(options);
+  let priceOptions = Object.keys(options).filter((key) => key !== '_id');
   let foodItem = props.foodItems;
 
   let [quantity, setQuantity] = useState(1);
