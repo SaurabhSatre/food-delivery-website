@@ -316,7 +316,7 @@ function BasicExample(props) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .zoom-image {
           transform: scale(1.05);
         }

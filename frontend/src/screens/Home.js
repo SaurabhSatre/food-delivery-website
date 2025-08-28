@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Card from '../components/Card'
@@ -13,14 +13,30 @@ export default function Home() {
   const [foodItemsdata, setfoodItemsdata] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   let serachText = useSelector(state => state.search);
 
-  const loadData = async () => {
+  // Get backend URL with fallback
+  const getBackendUrl = () => {
+    // Check if environment variable is set
+    if (process.env.REACT_APP_BACKEND_SERVER) {
+      return process.env.REACT_APP_BACKEND_SERVER;
+    }
+    
+    // Fallback to your deployed backend URL
+    return 'https://food-delivery-website-backend-nu.vercel.app';
+  };
+
+  const loadData = useCallback(async (retryAttempt = 0) => {
     try {
       setIsLoading(true);
       setError(null);
-      let responce = await fetch(`${process.env.REACT_APP_BACKEND_SERVER}/api/foodData`, {
+      
+      const backendUrl = getBackendUrl();
+      console.log('Attempting to connect to:', backendUrl);
+      
+      let responce = await fetch(`${backendUrl}/api/foodData`, {
         method: "POST",
         headers: {
           'Content-Type': 'application/json',
@@ -47,18 +63,38 @@ export default function Home() {
 
       setFoodCategoryData(Array.isArray(responceData[1]) ? responceData[1] : []);
       setfoodItemsdata(Array.isArray(responceData[2]) ? responceData[2] : []);
+      setRetryCount(0); // Reset retry count on success
     } catch (err) {
       console.error('Failed to load food data', err);
-      setError(err.message || 'Failed to load');
+      
+      // Implement retry logic with exponential backoff
+      if (retryAttempt < 3) {
+        const delay = Math.pow(2, retryAttempt) * 1000; // 1s, 2s, 4s
+        console.log(`Retrying in ${delay}ms... (attempt ${retryAttempt + 1}/3)`);
+        
+        setTimeout(() => {
+          loadData(retryAttempt + 1);
+        }, delay);
+        return;
+      }
+      
+      setError(err.message || 'Failed to load data. Please try again.');
+      setRetryCount(retryAttempt);
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setRetryCount(0);
+    loadData(0);
+  }, [loadData]);
+
  /* The useEffect hook is called in a component after the first render and every time the component
   updates */
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   return (
     <>
@@ -73,17 +109,24 @@ export default function Home() {
       <div className="m-2 m-md-3 m-lg-4" style={{ background: '#f8fafc', borderRadius: '18px', padding: '2rem' }}>
         {
           isLoading ? (
-            <Loader />
+            <div className="text-center">
+              <Loader />
+              {retryCount > 0 && (
+                <div className="text-muted mt-2">
+                  Retrying... (Attempt {retryCount}/3)
+                </div>
+              )}
+            </div>
           ) : error ? (
             <div className="text-center text-muted">
               <div style={{marginBottom: '12px'}}>Unable to load data.</div>
-              <button className="btn btn-sm btn-outline-secondary" onClick={loadData}>Retry</button>
+              <button className="btn btn-sm btn-outline-secondary" onClick={handleRetry}>Retry</button>
             </div>
           ) : foodCategoryData.length > 0
             ? foodCategoryData.map((data, index) => {
               return (
-                <div className='row mb-3'>
-                  <div key={data._id} className='category-title fs-3 m-3'> {data.CategoryName} </div>
+                <div key={data._id} className='row mb-3'>
+                  <div className='category-title fs-3 m-3'> {data.CategoryName} </div>
                   <hr />
 
                   {foodItemsdata.length > 0

@@ -353,7 +353,7 @@ export default function Cart({ onClose }) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .cart-container {
           -webkit-overflow-scrolling: touch;
           scroll-behavior: smooth;

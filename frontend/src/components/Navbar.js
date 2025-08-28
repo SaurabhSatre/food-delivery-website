@@ -354,7 +354,7 @@ function Navbar_func() {
           </Navbar.Collapse>
         </Container>
 
-        <style jsx>{`
+        <style>{`
           @keyframes logoFloat {
             0%, 100% { transform: translateY(0px); }
             50% { transform: translateY(-3px); }

@@ -4,5 +4,8 @@
         "source": "/(.*)",
         "destination": "/"
       }
-    ]
+    ],
+    "env": {
+      "REACT_APP_BACKEND_SERVER": "https://food-delivery-website-backend-nu.vercel.app"
+    }
   }

@@ -5,10 +5,8 @@ const express = require("express");
 const dotenv = require('dotenv');
 dotenv.config({path : "./config/config.env"});
 
-
 // Connecting to the database
-const mongodb = require("./config/db");
-mongodb();
+const { mongodb_connect, checkConnection } = require("./config/db");
 
 const app = express();
 app.use(express.json());    // It is used to parse incoming requests with JSON payloads
@@ -36,6 +34,23 @@ app.use((req , res , next)=>{
     next();
 })
 
+// Database connection middleware
+app.use(async (req, res, next) => {
+    try {
+        if (!checkConnection()) {
+            console.log('🔄 Attempting to reconnect to database...');
+            await mongodb_connect();
+        }
+        next();
+    } catch (error) {
+        console.error('❌ Database connection failed:', error);
+        res.status(503).json({ 
+            success: false, 
+            message: 'Database connection failed. Please try again.' 
+        });
+    }
+});
+
 // Routed Imported 
 const userRoute = require("./routes/userRoute.js");
 const displayData = require("./routes/DisplayData.js");
@@ -54,13 +69,32 @@ app.use("/api/admin" , AdminRoute );
 
 // Health check endpoint for Vercel
 app.get("/", (req, res) => {
-    res.json({ message: "HungryHub Backend API is running!" });
+    const dbStatus = checkConnection() ? 'connected' : 'disconnected';
+    res.json({ 
+        message: "HungryHub Backend API is running!", 
+        database: dbStatus,
+        timestamp: new Date().toISOString()
+    });
 });
 
-// It  is used to start a server that listens on port mentioned in confuguration file
-const PORT = process.env.PORT || 5000;
-app.listen(PORT , ()=>{
-    console.log(`Working at http://localhost:${PORT}/`)
-});
+// Initialize database connection
+const initializeServer = async () => {
+    try {
+        await mongodb_connect();
+        
+        // It  is used to start a server that listens on port mentioned in confuguration file
+        const PORT = process.env.PORT || 5000;
+        app.listen(PORT , ()=>{
+            console.log(`🚀 Server running at http://localhost:${PORT}/`);
+            console.log(`📊 Database status: ${checkConnection() ? 'Connected' : 'Disconnected'}`);
+        });
+    } catch (error) {
+        console.error('❌ Failed to initialize server:', error);
+        process.exit(1);
+    }
+};
+
+// Start the server
+initializeServer();
 
 // The dotenv package is commonly used to load environment variables from a configuration file 
